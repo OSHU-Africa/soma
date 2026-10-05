@@ -10,15 +10,21 @@
     "mode": "oral"
   },
   "localisation": {
+    "precision": "gps",
     "lat": 6.3703,
     "lon": 2.3912,
     "precision_m": 10,
     "pays": "BJ",
     "region": "Littoral",
-    "commune": "Cotonou"
+    "commune": "Cotonou",
+    "quartier": "Exemple"
   },
   "type_installation": "usage_productif",
-  "usages": ["eclairage", "commerce_artisanat", "ventilation"],
+  "usages": [
+    "eclairage",
+    "commerce_artisanat",
+    "ventilation"
+  ],
   "puissance_pv_wc": 400,
   "batterie": {
     "chimie": "lifepo4",
@@ -27,7 +33,11 @@
   },
   "onduleur_w": 500,
   "equipements": [
-    { "composant": "kit_tout_en_un", "marque": "Exemple", "modele": "X1000" }
+    {
+      "composant": "kit_tout_en_un",
+      "marque": "Exemple",
+      "modele": "X1000"
+    }
   ],
   "paygo": true,
   "etat": "en_service",
