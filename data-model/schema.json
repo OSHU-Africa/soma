@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oshu-africa/soma/data-model/schema.json",
+  "title": "Installation déclarée SOMA",
+  "description": "Structure d'une installation solaire hors réseau déclarée dans SOMA. Aucune donnée nominative sur le propriétaire n'est collectée.",
+  "type": "object",
+  "required": ["id", "declarant", "consentement", "localisation", "type_installation", "usages", "puissance_pv_wc", "etat", "date_installation", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Identifiant attribué par SOMA, ex. SOMA-BJ-000123.",
+      "type": "string",
+      "pattern": "^SOMA-[A-Z]{2}-[0-9]{6}$"
+    },
+    "declarant": {
+      "description": "Contributeur qui déclare l'installation. Identifiant pseudonyme, jamais publié.",
+      "type": "object",
+      "required": ["id_contributeur", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id_contributeur": { "type": "string", "pattern": "^CTB-[0-9A-Z]{6}$" },
+        "type": { "type": "string", "enum": ["technicien", "entreprise"] }
+      }
+    },
+    "consentement": {
+      "description": "Accord du propriétaire pour la déclaration. Obligatoire.",
+      "type": "object",
+      "required": ["obtenu", "date", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "obtenu": { "const": true },
+        "date": { "type": "string", "format": "date" },
+        "mode": { "type": "string", "enum": ["oral", "ecrit", "sms"] }
+      }
+    },
+    "localisation": {
+      "description": "Coordonnées exactes : stockées, jamais publiées. La carte publique n'utilise que la commune.",
+      "type": "object",
+      "required": ["lat", "lon", "pays", "commune"],
+      "additionalProperties": false,
+      "properties": {
+        "lat": { "type": "number", "minimum": -35, "maximum": 38 },
+        "lon": { "type": "number", "minimum": -26, "maximum": 52 },
+        "precision_m": { "type": "number", "minimum": 0 },
+        "pays": { "description": "Code ISO 3166-1 alpha-2, ex. BJ, TG.", "type": "string", "pattern": "^[A-Z]{2}$" },
+        "region": { "type": "string" },
+        "commune": { "type": "string" }
+      }
+    },
+    "type_installation": {
+      "type": "string",
+      "enum": ["kit_domestique", "systeme_autonome", "usage_productif", "pompage", "institutionnel", "mini_reseau"]
+    },
+    "usages": {
+      "description": "Ce que l'installation alimente.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["eclairage", "recharge_telephone", "audiovisuel", "froid", "ventilation", "commerce_artisanat", "agriculture", "eau", "sante", "education", "autre"] }
+    },
+    "puissance_pv_wc": {
+      "description": "Puissance crête totale des panneaux, en watts-crête.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "batterie": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chimie": { "type": "string", "enum": ["plomb_ouvert", "plomb_agm_gel", "lifepo4", "lithium_autre", "inconnue"] },
+        "tension_v": { "type": "number", "exclusiveMinimum": 0 },
+        "capacite_ah": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "onduleur_w": {
+      "description": "Puissance nominale de l'onduleur, si présent.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "equipements": {
+      "description": "Marques et modèles des composants principaux.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["composant", "marque"],
+        "additionalProperties": false,
+        "properties": {
+          "composant": { "type": "string", "enum": ["panneau", "regulateur", "onduleur", "batterie", "kit_tout_en_un"] },
+          "marque": { "type": "string" },
+          "modele": { "type": "string" }
+        }
+      }
+    },
+    "paygo": {
+      "description": "L'installation fonctionne-t-elle en paiement à l'usage ?",
+      "type": "boolean"
+    },
+    "etat": {
+      "type": "string",
+      "enum": ["en_service", "en_panne", "hors_service"]
+    },
+    "date_installation": {
+      "description": "Date exacte ou mois (AAAA-MM).",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$"
+    },
+    "derniere_intervention": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$"
+    },
+    "source": {
+      "description": "declaration : saisie par un contributeur. kit_connecte : remontée automatique d'un équipement connecté.",
+      "type": "string",
+      "enum": ["declaration", "kit_connecte"]
+    }
+  }
+}
