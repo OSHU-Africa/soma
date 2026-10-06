@@ -1,1 +1,191 @@
-,;kniik
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOMA — Carte des installations solaires hors réseau</title>
+<meta name="description" content="Carte collaborative des installations solaires hors réseau en Afrique. Données agrégées par commune. Projet open source OSHU — Open Solar Hub.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #f7f6f2; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6a65;
+    --line: #e4e2db; --accent: #e08a00; --accent-soft: rgba(224,138,0,.25);
+    --ok: #2f8f5b; --warn: #c9821a; --off: #b03a2e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --panel: #1f1f1d; --text: #ecebe6; --muted: #a09e97;
+            --line: #33322f; --accent: #f2a227; --accent-soft: rgba(242,162,39,.3); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 18px; letter-spacing: .2px; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .lang { font-size: 13px; color: var(--muted); }
+  .lang button { background: none; border: 0; padding: 0 2px; color: inherit; cursor: pointer; font: inherit; }
+  .lang button[aria-pressed="true"] { color: var(--text); font-weight: 600; }
+  .stats { display: flex; gap: 22px; margin-top: 10px; flex-wrap: wrap; }
+  .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat small { color: var(--muted); font-size: 12px; }
+  @media (max-width: 480px) { .stats { gap: 16px; } .stat b { font-size: 19px; } h1 { font-size: 16px; } }
+  #map { flex: 1; min-height: 320px; }
+  footer { padding: 8px 16px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line);
+    background: var(--panel); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: inherit; }
+  .banner { padding: 8px 16px; font-size: 13px; background: var(--accent-soft); }
+  .banner[hidden] { display: none; }
+  .leaflet-popup-content { font: 13px/1.45 system-ui, sans-serif; min-width: 190px; }
+  .pop h3 { margin: 0 0 6px; font-size: 15px; }
+  .pop table { border-collapse: collapse; width: 100%; }
+  .pop td { padding: 2px 0; }
+  .pop td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .pop .bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin: 6px 0 4px; background: #ddd; }
+  .pop .types { margin-top: 6px; color: #666; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>SOMA <span data-t="subtitle">— installations solaires hors réseau</span></h1>
+    <div class="lang"><button id="fr" aria-pressed="true">FR</button> | <button id="en" aria-pressed="false">EN</button></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="s-inst">–</b><small data-t="installations">installations déclarées</small></div>
+    <div class="stat"><b id="s-kwc">–</b><small data-t="kwc">kWc installés</small></div>
+    <div class="stat"><b id="s-com">–</b><small data-t="communes">communes affichées</small></div>
+  </div>
+</header>
+<div class="banner" id="banner" hidden></div>
+<div id="map" role="region" aria-label="Carte"></div>
+<footer>
+  <span id="note" data-t="note">Totaux par commune. Une commune n'apparaît qu'à partir de 5 installations déclarées par au moins 2 contributeurs.</span>
+  <span><a href="https://github.com/oshu-africa/soma">OSHU — Open Solar Hub</a><span id="maj"></span></span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+// ---------------------------------------------------------------
+// CONFIGURATION : coller ici le lien CSV de la feuille publique
+// (Fichier > Partager > Publier sur le Web > onglet « communes » > CSV)
+// ---------------------------------------------------------------
+const CSV_URL = "";
+
+const T = {
+  fr: { subtitle: "— installations solaires hors réseau", installations: "installations déclarées",
+        kwc: "kWc installés", communes: "communes affichées",
+        note: "Totaux par commune. Une commune n'apparaît qu'à partir de 5 installations déclarées par au moins 2 contributeurs.",
+        inst: "Installations", power: "Puissance", ok: "En service", fault: "En panne", off: "Hors service",
+        masked: n => `${n} installation(s) se trouvent dans des communes pas encore affichées (seuil de confidentialité non atteint).`,
+        demo: "Données de démonstration fictives. La carte réelle s'affichera dès la configuration du lien de données.",
+        error: "Les données n'ont pas pu être chargées. Réessayez plus tard.",
+        maj: d => `mise à jour : ${d}` },
+  en: { subtitle: "— off-grid solar installations", installations: "declared installations",
+        kwc: "kWp installed", communes: "municipalities shown",
+        note: "Totals per municipality. A municipality only appears once it has 5 installations declared by at least 2 contributors.",
+        inst: "Installations", power: "Capacity", ok: "Working", fault: "Faulty", off: "Out of service",
+        masked: n => `${n} installation(s) are in municipalities not shown yet (privacy threshold not reached).`,
+        demo: "Fictional demo data. The real map will appear once the data link is configured.",
+        error: "Data could not be loaded. Please try again later.",
+        maj: d => `updated: ${d}` }
+};
+let lang = "fr", donnees = [], masquees = 0, majDate = "", modeDemo = false, etatBanniere = null;
+
+const DEMO = [
+  { pays:"Bénin", commune:"Abomey-Calavi", lat:6.4485, lng:2.3557, installations:42, puissance_kwc:18.6, en_service:35, en_panne:5, hors_service:2, types:"Kit domestique: 30; Usage productif: 12" },
+  { pays:"Bénin", commune:"Porto-Novo", lat:6.4969, lng:2.6289, installations:17, puissance_kwc:7.1, en_service:14, en_panne:2, hors_service:1, types:"Kit domestique: 12; Pompage: 5" },
+  { pays:"Bénin", commune:"Parakou", lat:9.3372, lng:2.6303, installations:23, puissance_kwc:11.4, en_service:19, en_panne:3, hors_service:1, types:"Kit domestique: 15; Usage productif: 8" },
+  { pays:"Togo", commune:"Tsévié", lat:6.4261, lng:1.2133, installations:9, puissance_kwc:3.2, en_service:8, en_panne:1, hors_service:0, types:"Kit domestique: 9" }
+];
+
+const map = L.map("map", { scrollWheelZoom: true }).setView([8.0, 1.9], 6);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 13, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+const couche = L.layerGroup().addTo(map);
+
+const nf = n => Number(n).toLocaleString(lang === "fr" ? "fr-FR" : "en-US", { maximumFractionDigits: 1 });
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+function popup(z) {
+  const t = T[lang], tot = z.installations || 1;
+  const seg = (n, c) => `<span style="width:${100 * n / tot}%;background:${c}"></span>`;
+  return `<div class="pop"><h3>${esc(z.commune)} <small style="color:#888">· ${esc(z.pays)}</small></h3>
+    <table>
+      <tr><td>${t.inst}</td><td><b>${nf(z.installations)}</b></td></tr>
+      <tr><td>${t.power}</td><td>${nf(z.puissance_kwc)} ${lang === "fr" ? "kWc" : "kWp"}</td></tr>
+    </table>
+    <div class="bar">${seg(z.en_service, "#2f8f5b")}${seg(z.en_panne, "#c9821a")}${seg(z.hors_service, "#b03a2e")}</div>
+    <table>
+      <tr><td><span style="color:#2f8f5b">● ${t.ok}</span></td><td>${nf(z.en_service)}</td></tr>
+      <tr><td><span style="color:#c9821a">● ${t.fault}</span></td><td>${nf(z.en_panne)}</td></tr>
+      <tr><td><span style="color:#b03a2e">● ${t.off}</span></td><td>${nf(z.hors_service)}</td></tr>
+    </table>
+    ${z.types ? `<div class="types">${esc(z.types)}</div>` : ""}</div>`;
+}
+
+function rendre() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el => { el.textContent = t[el.dataset.t]; });
+  document.getElementById("fr").setAttribute("aria-pressed", lang === "fr");
+  document.getElementById("en").setAttribute("aria-pressed", lang === "en");
+
+  const totalInst = donnees.reduce((s, z) => s + z.installations, 0) + masquees;
+  const totalKwc = donnees.reduce((s, z) => s + z.puissance_kwc, 0);
+  document.getElementById("s-inst").textContent = nf(totalInst);
+  document.getElementById("s-kwc").textContent = nf(totalKwc);
+  document.getElementById("s-com").textContent = nf(donnees.length);
+  document.getElementById("maj").textContent = majDate ? " · " + t.maj(majDate) : "";
+
+  const b = document.getElementById("banner");
+  const msg = etatBanniere === "error" ? t.error : modeDemo ? t.demo : masquees > 0 ? t.masked(nf(masquees)) : "";
+  b.textContent = msg; b.hidden = !msg;
+
+  couche.clearLayers();
+  const max = Math.max(1, ...donnees.map(z => z.installations));
+  donnees.forEach(z => {
+    L.circleMarker([z.lat, z.lng], {
+      radius: 6 + 22 * Math.sqrt(z.installations / max),
+      color: css("--accent"), weight: 1.5, fillColor: css("--accent"), fillOpacity: .35
+    }).bindPopup(popup(z)).bindTooltip(`${z.commune} · ${nf(z.installations)}`).addTo(couche);
+  });
+}
+
+function charger(lignes) {
+  donnees = []; masquees = 0;
+  lignes.forEach(r => {
+    const n = k => parseFloat(String(r[k] ?? "").replace(",", ".")) || 0;
+    if (r.commune === "__zones_masquees__") { masquees = n("installations"); majDate = r.mise_a_jour || majDate; return; }
+    if (r.lat === "" || r.lng === "" || r.lat == null) return;
+    donnees.push({ pays: r.pays, commune: r.commune, lat: n("lat"), lng: n("lng"),
+      installations: n("installations"), puissance_kwc: n("puissance_kwc"),
+      en_service: n("en_service"), en_panne: n("en_panne"), hors_service: n("hors_service"), types: r.types || "" });
+    majDate = r.mise_a_jour || majDate;
+  });
+  rendre();
+  if (donnees.length) map.fitBounds(L.latLngBounds(donnees.map(z => [z.lat, z.lng])).pad(0.3), { maxZoom: 9 });
+}
+
+document.getElementById("fr").onclick = () => { lang = "fr"; rendre(); };
+document.getElementById("en").onclick = () => { lang = "en"; rendre(); };
+
+const params = new URLSearchParams(location.search);
+if (params.get("lang") === "en") lang = "en";
+
+if (!CSV_URL || params.get("demo") === "1") {
+  modeDemo = true; charger(DEMO);
+} else {
+  Papa.parse(CSV_URL + (CSV_URL.includes("?") ? "&" : "?") + "t=" + Date.now(), {
+    download: true, header: true, skipEmptyLines: true,
+    complete: res => charger(res.data),
+    error: () => { etatBanniere = "error"; rendre(); }
+  });
+}
+</script>
+</body>
+</html>
