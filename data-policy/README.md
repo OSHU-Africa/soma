@@ -1,8 +1,8 @@
-Français | English (à venir)
+**Français** | English (à venir)
 
 # Politique de données SOMA
 
-Version 0.1 — projet, octobre 2026.
+Version 0.2 — octobre 2026.
 
 La licence AGPL-3.0 couvre le code de SOMA. Les données déclarées relèvent de la présente politique.
 
@@ -10,7 +10,7 @@ La licence AGPL-3.0 couvre le code de SOMA. Les données déclarées relèvent d
 
 SOMA collecte uniquement des informations techniques sur l'installation : localisation, puissance, équipements, usages, état, dates.
 
-SOMA ne collecte aucune donnée nominative sur le propriétaire : ni nom, ni téléphone, ni adresse, ni photo de personne.
+SOMA ne collecte **aucune donnée nominative** sur le propriétaire : ni nom, ni téléphone, ni adresse, ni photo de personne.
 
 Le contributeur est identifié par un identifiant pseudonyme (`CTB-…`). Ses coordonnées de contact sont conservées séparément et ne sont jamais associées aux données publiées.
 
@@ -46,16 +46,24 @@ Une zone n'est affichée ou communiquée que si elle compte **au moins 5 install
 
 Cette règle empêche de retrouver une installation précise ou le portefeuille d'un installateur.
 
-## 7. Conservation et sécurité
+## 7. Crédits carbone
 
-- Les coordonnées exactes sont stockées chiffrées.
+- Les données déclarées dans SOMA ne sont **pas** utilisées pour générer, acheter ou vendre des crédits carbone.
+- Si OSHU développe un tel programme à l'avenir, la participation reposera sur un **accord séparé, explicite et facultatif** du contributeur et du propriétaire de l'installation. Une déclaration dans SOMA ne vaut jamais cet accord.
+- Les participants à un tel programme recevront une **part des revenus** générés, selon des conditions publiées à l'avance.
+- Aucune installation déjà enregistrée dans un autre programme carbone (fabricant, distributeur, projet tiers) ne sera comptée une seconde fois.
+
+## 8. Conservation et sécurité
+
+- Pendant la phase pilote, les données brutes sont stockées dans un espace Google Drive dédié au projet, accessible uniquement aux responsables d'OSHU. L'hébergeur assure le chiffrement des données au repos.
+- Les coordonnées des contributeurs et les déclarations d'installations sont conservées dans deux fichiers distincts.
 - Une installation retirée est supprimée des données brutes ; elle peut subsister dans des statistiques agrégées déjà publiées.
-- Les accès aux données brutes sont journalisés.
+- Les mesures de sécurité seront renforcées (journalisation des accès, hébergement dédié) au-delà de la phase pilote.
 
-## 8. Conformité
+## 9. Conformité
 
 Le traitement respecte la réglementation sur les données personnelles des pays couverts, notamment le Code du numérique du Bénin (autorité : APDP) et la loi togolaise sur la protection des données à caractère personnel.
 
-## 9. Contact
+## 10. Contact
 
 weareoshu.project@gmail.com
